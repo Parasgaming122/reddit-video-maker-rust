@@ -1,0 +1,370 @@
+<!-- index/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reddit Video Maker</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 2rem;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .card-header {
+            background-color: #ff4500;
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+        }
+        .btn-primary {
+            background-color: #ff4500;
+            border-color: #ff4500;
+        }
+        .btn-primary:hover {
+            background-color: #e03e00;
+            border-color: #e03e00;
+        }
+        .preview-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .form-range::-webkit-slider-thumb {
+            background: #ff4500;
+        }
+        .voice-select {
+            border-left: 3px solid #ff4500;
+        }
+        #loading {
+            display: none;
+        }
+        .loading-spinner {
+            color: #ff4500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0">Reddit Video Maker</h2>
+                        <span class="material-icons">video_library</span>
+                    </div>
+                    <div class="card-body">
+                        <!-- Step 1: Script Input -->
+                        <div class="mb-4">
+                            <label for="script" class="form-label">Reddit Story</label>
+                            <textarea class="form-control" id="script" rows="5" placeholder="Paste your Reddit story here..."></textarea>
+                        </div>
+
+                        <!-- TTS Settings -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="tts-lang" class="form-label">Language</label>
+                                <select class="form-select" id="tts-lang">
+                                    <option value="en">English</option>
+                                    <option value="es">Spanish</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 voice-select">
+                                <label for="tts-voice" class="form-label">Voice</label>
+                                <select class="form-select" id="tts-voice">
+                                    <option value="com.au">Australian</option>
+                                    <option value="co.uk">British</option>
+                                    <option value="us" selected>American</option>
+                                    <option value="ca">Canadian</option>
+                                    <option value="ind">Indian</option>
+                                    <option value="za">South African</option>
+                                    <option value="ie">Irish</option>
+                                    <option value="nz">New Zealand</option>
+                                    <option value="ng">Nigerian</option>
+                                    <option value="tt">Trinidad & Tobago</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Speed Control -->
+                        <div class="mb-4">
+                            <label for="tts-speed" class="form-label">
+                                Speech Speed: <span id="speed-value">1.0</span>x
+                            </label>
+                            <input type="range" class="form-range" min="0.5" max="2.0" step="0.1" value="1.0" id="tts-speed">
+                        </div>
+
+                        <button class="btn btn-primary w-100 py-2 mb-3" onclick="generateTTS()">
+                            <span class="material-icons align-middle">volume_up</span> Generate Audio
+                        </button>
+
+                        <!-- Background Selection -->
+                        <div class="mb-4">
+                            <label class="form-label">Background</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="bg-type" id="bg-image" autocomplete="off" checked>
+                                <label class="btn btn-outline-secondary" for="bg-image">Image</label>
+
+                                <input type="radio" class="btn-check" name="bg-type" id="bg-video" autocomplete="off">
+                                <label class="btn btn-outline-secondary" for="bg-video">Video</label>
+                            </div>
+                            <input type="file" class="form-control mt-2" id="bg-file" accept="image/*,video/*">
+                        </div>
+
+                        <!-- Aspect Ratio -->
+                        <div class="mb-4">
+                            <label for="aspect-ratio" class="form-label">Aspect Ratio</label>
+                            <select class="form-select" id="aspect-ratio">
+                                <option value="16:9">16:9 (YouTube)</option>
+                                <option value="9:16">9:16 (Shorts/Reels)</option>
+                            </select>
+                        </div>
+
+                        <!-- Caption Info -->
+                        <div class="alert alert-info">
+                            <span class="material-icons align-middle">closed_caption</span>
+                            <strong>Auto Captions:</strong> Captions will be automatically generated and embedded in your video
+                        </div>
+
+                        <button class="btn btn-primary w-100 py-2" onclick="createVideo()">
+                            <span class="material-icons align-middle">movie</span> Generate Video
+                        </button>
+
+                        <!-- Loading Indicator -->
+                        <div id="loading" class="text-center mt-4">
+                            <div class="spinner-border loading-spinner" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Processing video...</p>
+                        </div>
+
+                        <!-- Preview Section -->
+                        <div class="preview-container mt-4">
+                            <h5>Preview</h5>
+                            <div id="audio-preview-container" class="mb-3" style="display: none;">
+                                <audio id="audio-preview" controls class="w-100"></audio>
+                            </div>
+                            <div id="video-preview-container" style="display: none;">
+                                <video id="video-preview" controls class="w-100 rounded"></video>
+                                <div id="caption-info" class="mt-2" style="display: none;">
+                                    <small class="text-muted">
+                                        <span class="material-icons align-middle" style="font-size: 16px;">closed_caption</span>
+                                        <strong>Generated Captions:</strong> <span id="caption-text"></span>
+                                    </small>
+                                    <br>
+                                    <a id="srt-download" href="#" class="btn btn-sm btn-outline-secondary mt-1" style="display: none;">
+                                        <span class="material-icons align-middle" style="font-size: 16px;">download</span>
+                                        Download SRT File
+                                    </a>
+                                </div>
+                            </div>
+                            <div id="error" class="alert alert-danger mt-3" style="display: none;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Update voice options when language changes
+        document.getElementById('tts-lang').addEventListener('change', function() {
+            const lang = this.value;
+            const voiceSelect = document.getElementById('tts-voice');
+            voiceSelect.innerHTML = '';
+
+            const voices = {
+                'en': [
+                    {id: 'com.au', name: 'Australian'},
+                    {id: 'co.uk', name: 'British'},
+                    {id: 'us', name: 'American'},
+                    {id: 'ca', name: 'Canadian'},
+                    {id: 'ind', name: 'Indian'},
+                    {id: 'za', name: 'South African'},
+                    {id: 'ie', name: 'Irish'},
+                    {id: 'nz', name: 'New Zealand'},
+                    {id: 'ng', name: 'Nigerian'},
+                    {id: 'tt', name: 'Trinidad & Tobago'}
+                ],
+                'es': [
+                    {id: 'es', name: 'Spanish (Spain)'},
+                    {id: 'mx', name: 'Mexican Spanish'},
+                    {id: 'ar', name: 'Argentinian Spanish'},
+                    {id: 'cl', name: 'Chilean Spanish'}
+                ]
+            };
+
+            voices[lang].forEach(voice => {
+                const option = document.createElement('option');
+                option.value = voice.id;
+                option.textContent = voice.name;
+                voiceSelect.appendChild(option);
+            });
+        });
+
+        // Speed control display
+        document.getElementById('tts-speed').addEventListener('input', function() {
+            document.getElementById('speed-value').textContent = this.value;
+        });
+
+        let currentAudioFile = '';
+
+        async function generateTTS() {
+            console.log('🎵 Generate Audio button clicked');
+            const text = document.getElementById('script').value;
+            const lang = document.getElementById('tts-lang').value;
+            const voice = document.getElementById('tts-voice').value;
+            const speed = parseFloat(document.getElementById('tts-speed').value);
+
+            console.log('Audio Settings:', { 
+                textLength: text.length, 
+                lang, 
+                voice, 
+                speed 
+            });
+
+            if (!text.trim()) {
+                console.log('❌ Error: No text provided');
+                showError('Please enter a Reddit story');
+                return;
+            }
+
+            try {
+                console.log('📡 Sending TTS request to server...');
+                const response = await fetch('/generate-tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, lang, voice, speed })
+                });
+
+                const data = await response.json();
+                console.log('📋 TTS Response:', data);
+
+                if (data.error) {
+                    console.log('❌ TTS Error:', data.error);
+                    showError(data.error);
+                    return;
+                }
+
+                currentAudioFile = data.filename;
+                document.getElementById('audio-preview').src = data.audio;
+                document.getElementById('audio-preview-container').style.display = 'block';
+                document.getElementById('video-preview-container').style.display = 'none';
+                clearError();
+                console.log('✅ Audio generated successfully:', data.filename);
+            } catch (err) {
+                console.log('❌ TTS Fetch Error:', err);
+                showError('Failed to generate audio: ' + err.message);
+            }
+        }
+
+        async function createVideo() {
+            console.log('🎬 Generate Video button clicked');
+            const bgFile = document.getElementById('bg-file').files[0];
+            if (!bgFile) {
+                console.log('❌ Error: No background file selected');
+                showError('Please select a background file');
+                return;
+            }
+
+            if (!currentAudioFile) {
+                console.log('❌ Error: No audio file available');
+                showError('Please generate audio first');
+                return;
+            }
+
+            const originalText = document.getElementById('script').value;
+
+            console.log('Video Settings:', {
+                backgroundFile: bgFile.name,
+                fileSize: `${(bgFile.size / 1024 / 1024).toFixed(2)} MB`,
+                audioFile: currentAudioFile,
+                aspectRatio: document.getElementById('aspect-ratio').value,
+                textLength: originalText.length
+            });
+
+            const formData = new FormData();
+            formData.append('bg_file', bgFile);
+            formData.append('aspect', document.getElementById('aspect-ratio').value);
+            formData.append('audio_filename', currentAudioFile);
+            formData.append('text', originalText); // Pass original text for caption generation
+
+            document.getElementById('loading').style.display = 'block';
+            clearError();
+
+            try {
+                console.log('📡 Sending video creation request to server...');
+                const response = await fetch('/create-video', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                console.log('📋 Video Response:', data);
+
+                if (data.error) {
+                    console.log('❌ Video Error:', data.error);
+                    if (data.ffmpeg_error) {
+                        console.log('🔧 FFmpeg Error Details:', data.ffmpeg_error);
+                    }
+                    showError(data.error);
+                    return;
+                }
+
+                const videoPlayer = document.getElementById('video-preview');
+                videoPlayer.src = data.video;
+                videoPlayer.style.height = data.aspect === '9:16' ? '500px' : 'auto';
+
+                // Force reload the video element to prevent caching issues
+                videoPlayer.load();
+
+                document.getElementById('video-preview-container').style.display = 'block';
+
+                // Show caption information if available
+                if (data.captions) {
+                    document.getElementById('caption-text').textContent = data.captions;
+                    document.getElementById('caption-info').style.display = 'block';
+                    console.log('📝 Captions generated:', data.captions);
+
+                    if (data.srt_file) {
+                        const srtLink = document.getElementById('srt-download');
+                        srtLink.href = data.srt_file;
+                        srtLink.style.display = 'inline-block';
+                        console.log('📄 SRT file available:', data.srt_file);
+                    }
+                } else {
+                    document.getElementById('caption-info').style.display = 'none';
+                }
+
+                console.log('✅ Video generated successfully:', data.video);
+            } catch (err) {
+                console.log('❌ Video Fetch Error:', err);
+                showError('Failed to create video: ' + err.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function clearError() {
+            document.getElementById('error').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
